@@ -4,9 +4,8 @@ from seleniumbase import Driver
 from PIL import Image
 import numpy as np
 from config import api_url
-
-
 import time
+
 
 def timing_decorator(func):
     def wrapper(*args, **kwargs):
@@ -14,7 +13,7 @@ def timing_decorator(func):
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = end_time - start_time
-        print(f"{func.__name__} выполнилась за {execution_time:.2f} секунд")
+        print(f"{func.__name__} completed in {execution_time:.2f} seconds")
         return result
     return wrapper
 
@@ -29,28 +28,27 @@ def take_dataset(cursor=''):
 
 @timing_decorator
 def save_dataset(items):
-    if not os.path.exists("dataset"):
-        os.mkdir("dataset")      
+    folder = 'dataset'
+    if not os.path.exists(folder):
+        os.mkdir(folder)      
         
     driver = Driver(uc=True, headless2=True)
     i = 1
     for item in items:
         description = item["description"]
         image_url = item["image_url"]
-        path_img = f"dataset/{'_'.join(image_url.split('/')[-2:]).split('.')[0]}"
-        print(image_url)   
+        path_img = f"{folder}/{'_'.join(image_url.split('/')[-2:]).split('.')[0]}"
         if description != None:
             driver.get(image_url)  
             driver.maximize_window()
             driver.save_screenshot(f"{path_img}.png")
             img_without_background(f"{path_img}.png")
-            print(i)
             with open(f"{path_img}.txt", "w", encoding="utf-8") as file:
                 file.write(description)
         i += 1
     driver.quit()      
-   
-@timing_decorator    
+
+    
 def img_without_background(image_path):
     image = Image.open(image_path)
     image = image.convert("RGBA")
@@ -70,5 +68,4 @@ def img_without_background(image_path):
 
 cursor, items = take_dataset()
 save_dataset(items)
-
   
