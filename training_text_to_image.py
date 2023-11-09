@@ -3,50 +3,51 @@ import os
 from seleniumbase import Driver
 from PIL import Image
 import numpy as np
-from config import api_url
-import time
+from config import api_url, TOKEN, telegram_id
 
 
-def timing_decorator(func):
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        result = func(*args, **kwargs)
-        end_time = time.time()
-        execution_time = end_time - start_time
-        print(f"{func.__name__} completed in {execution_time:.2f} seconds")
-        return result
-    return wrapper
+url_telegram = f'https://api.telegram.org/bot{TOKEN}/sendMessage?chat_id={telegram_id}&text='
 
 
-def take_dataset(cursor=''):
+def take_dataset():
     url = f'{api_url}/{cursor}'
     r_dataset = requests.get(url)
-    cursor = r_dataset.json()['cursor']
-    items = r_dataset.json()['items']
-    return cursor, items
+    if r_dataset.status_code == 200:
+        cursor = r_dataset.json()['cursor']
+        items = r_dataset.json()['items']
+        return cursor, items
+    else:
+        text = f'take_dataset() status code: {r_dataset.status_code}, cursor = {cursor}'
+        requests.get(f'{url_telegram}{text}')
     
 
-@timing_decorator
-def save_dataset(items):
-    folder = 'dataset'
+def create_folder(name_folder):
+    folder = name_folder
     if not os.path.exists(folder):
-        os.mkdir(folder)      
-        
+        os.mkdir(folder)  
+    return folder
+
+
+def save_dataset(items, img_counter=0):
+    dataset = create_folder('dataset')         
     driver = Driver(uc=True, headless2=True)
-    i = 1
     for item in items:
         description = item["description"]
         image_url = item["image_url"]
-        path_img = f"{folder}/{'_'.join(image_url.split('/')[-2:]).split('.')[0]}"
         if description != None:
+            img_counter += 1
+            folder_picture = create_folder(f'{dataset}/picture_{img_counter}')   
+            path_img = f"{folder_picture}/{'_'.join(image_url.split('/')[-2:]).split('.')[0]}"
             driver.get(image_url)  
             driver.maximize_window()
             driver.save_screenshot(f"{path_img}.png")
             img_without_background(f"{path_img}.png")
             with open(f"{path_img}.txt", "w", encoding="utf-8") as file:
                 file.write(description)
-        i += 1
+            
     driver.quit()      
+    text = f'save_dataset(), img_counter = {img_counter}'
+    requests.get(f'{url_telegram}{text}')
 
     
 def img_without_background(image_path):
@@ -64,8 +65,12 @@ def img_without_background(image_path):
     image.save(image_path)
     image.close()
 
+ 
+def main():    
+    cursor = ''
+    cursor, items = take_dataset(cursor)
+    save_dataset(items)
     
 
-cursor, items = take_dataset()
-save_dataset(items)
+main()
   

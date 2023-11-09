@@ -399,3 +399,6 @@ FodyWeavers.xsd
 
 env
 dataset
+config.py
+downloaded_files
+desktop.ini
